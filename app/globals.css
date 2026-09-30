@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-cairo), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* خلفية الصفحات: وردي هادئ مع كريمي وأزرق سماوي وبنفسجي فاتح */
+html[data-bg="modern"] body {
+  background-color: #f4f6f8;
+  background-image: linear-gradient(180deg, #f8fafc 0%, #eef2f6 100%);
+}
+
+body {
+  background-color: #f8f3f0;
+  background-image:
+    radial-gradient(ellipse 72% 58% at 6% 8%, rgba(244, 176, 196, 0.62), transparent 62%),
+    radial-gradient(ellipse 58% 52% at 96% 92%, rgba(166, 204, 236, 0.55), transparent 64%),
+    radial-gradient(ellipse 42% 38% at 82% 6%, rgba(214, 196, 230, 0.42), transparent 60%),
+    linear-gradient(165deg, #fbf7f4 0%, #fdeef3 48%, #eef4fb 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
