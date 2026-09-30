@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Timestamp, addDoc, getDocs } from "firebase/firestore";
 import { tRakeezSchoolRef } from "@/lib/rakeezSchool";
+import { classLabel, CLASS_OPTIONS } from "@/lib/classes";
 
 interface TaskItem {
   id?: string;
@@ -14,14 +15,6 @@ interface TaskItem {
   status: "active" | "completed";
   createdAt?: Timestamp;
 }
-
-const CLASS_OPTIONS = [
-  { id: "class_3a", label: "الصف الثالث الابتدائي (أ)" },
-  { id: "class_3b", label: "الصف الثالث الابتدائي (ب)" },
-  { id: "class_4a", label: "الصف الرابع الابتدائي (أ)" },
-];
-
-const classLabel = (classId: string) => CLASS_OPTIONS.find((item) => item.id === classId)?.label ?? classId;
 
 export default function TasksDashboard({ schoolId, currentUserId }: { schoolId: string; currentUserId: string }) {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -99,8 +92,8 @@ export default function TasksDashboard({ schoolId, currentUserId }: { schoolId: 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-2xl border border-rose-100" dir="rtl">
       <div className="border-b border-slate-100 pb-4 mb-6">
-        <h2 className="text-2xl font-bold text-slate-800">متابعة الواجبات والمهام المدرسية</h2>
-        <p className="text-sm text-slate-500">إدارة وتوزيع الواجبات المدرسية للفصول</p>
+        <h2 className="rk-title text-slate-800">متابعة الواجبات والمهام المدرسية</h2>
+        <p className="rk-lead text-slate-500">إدارة وتوزيع الواجبات المدرسية للفصول</p>
       </div>
 
       {successMsg && (

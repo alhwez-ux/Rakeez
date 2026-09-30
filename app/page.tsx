@@ -24,7 +24,7 @@ export default function RakeezLoginPage() {
     <main className="min-h-screen grid grid-cols-1 lg:grid-cols-2 font-sans" dir="rtl">
       
       {/* القسم الأيمن: الهوية والتعريف بالنظام التنظيمي (يظهر كاملاً على الحاسوب، مخفف على الجوال) */}
-      <div className="flex flex-col justify-between p-8 lg:p-16 text-white relative overflow-hidden bg-[linear-gradient(165deg,#1b3348_0%,#2c3148_46%,#5a3a48_100%)]">
+      <div className="flex flex-col justify-between gap-8 p-6 sm:p-8 lg:p-16 text-white relative overflow-hidden bg-[linear-gradient(165deg,#1b3348_0%,#2c3148_46%,#5a3a48_100%)]">
         <div className="absolute -left-16 -top-16 w-72 h-72 bg-sky-400/20 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute -right-10 top-1/3 w-80 h-80 bg-rose-300/25 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute left-1/4 -bottom-20 w-72 h-72 bg-violet-300/15 rounded-full blur-3xl pointer-events-none"></div>
@@ -44,16 +44,16 @@ export default function RakeezLoginPage() {
           </div>
 
           {/* العنوان الرئيسي والنبذة */}
-          <h2 className="text-3xl lg:text-4xl font-extrabold leading-snug mb-4">
+          <h2 className="rk-title text-white mb-3">
             العصب التنظيمي لإدارة مدرستك بكفاءة عالية
           </h2>
-          <p className="text-slate-300 text-base leading-relaxed mb-8">
+          <p className="rk-lead text-slate-300 mb-6 lg:mb-8">
             نظام موحد يدمج إدارة الجداول، حصص الاحتياط، الغياب اليومي، والمتابعة الإدارية للمعلمين والإداريين بكل دقة وسرعة وبدون تداخل بيانات.
           </p>
         </div>
 
         {/* مميزات سريعة تظهر في الواجهة */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t border-slate-800 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t border-slate-800 rk-lead">
           <div className="flex items-center gap-2 text-slate-300">
             <ShieldCheck className="w-5 h-5 text-blue-400 shrink-0" />
             <span>عزل تام لبيانات المدارس</span>
@@ -71,18 +71,18 @@ export default function RakeezLoginPage() {
 
       {/* القسم الأيسر: نموذج تسجيل الدخول (يتكيف تلقائياً مع حجم الشاشة) */}
       <div className="flex items-center justify-center p-6 lg:p-12">
-        <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100">
+        <div className="w-full max-w-md bg-white p-6 sm:p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100">
           
           <div className="mb-8">
-            <h3 className="text-2xl font-bold text-slate-800 mb-2">تسجيل الدخول</h3>
-            <p className="text-slate-500 text-sm">أدخل بياناتك للوصول إلى لوحة التحكم التشغيلية</p>
+            <h3 className="rk-title text-slate-800 mb-2">تسجيل الدخول</h3>
+            <p className="rk-lead text-slate-500">أدخل بياناتك للوصول إلى لوحة التحكم التشغيلية</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
             
             {/* اختيار المدرسة (للنظام المتعدد - Multi-tenant) */}
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-2">المدرسة / المنشأة</label>
+              <label className="rk-label">المدرسة / المنشأة</label>
               <div className="relative">
                 <span className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
                   <Building2 className="w-4 h-4" />
@@ -102,7 +102,7 @@ export default function RakeezLoginPage() {
 
             {/* رقم الجوال أو المعرف الوظيفي */}
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-2">رقم الجوال أو المعرف الوظيفي</label>
+              <label className="rk-label">رقم الجوال أو المعرف الوظيفي</label>
               <div className="relative">
                 <span className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
                   <Phone className="w-4 h-4" />
@@ -137,7 +137,7 @@ export default function RakeezLoginPage() {
 
           {/* تذييل بسيط */}
           <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-            <p className="text-xs text-slate-400 flex items-center justify-center gap-1">
+            <p className="rk-lead text-slate-400 flex items-center justify-center gap-1">
               <Lock className="w-3.5 h-3.5" />
               <span>بيانات مشفرة ومعزولة لكل مدرسة بشكل كامل</span>
             </p>

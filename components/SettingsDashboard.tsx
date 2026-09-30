@@ -43,8 +43,8 @@ export default function SettingsDashboard({
     <div className="max-w-7xl mx-auto p-6 bg-white shadow-lg rounded-2xl border border-rose-100" dir="rtl">
       <div className="border-b border-slate-100 pb-4 mb-6 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">لوحة الإعدادات وصلاحيات الإدارة</h2>
-          <p className="text-sm text-slate-500">إدارة الإدخال، نظام نور، طباعة التقارير، وتخصيص مظهر النظام</p>
+          <h2 className="rk-title text-slate-800">لوحة الإعدادات وصلاحيات الإدارة</h2>
+          <p className="rk-lead text-slate-500">إدارة الإدخال، نظام نور، طباعة التقارير، وتخصيص مظهر النظام</p>
         </div>
         {statusMessage && (
           <span className="bg-blue-50 text-blue-900 text-xs px-4 py-2 rounded-xl font-bold shadow-sm">{statusMessage}</span>

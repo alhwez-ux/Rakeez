@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { getDocs, query, where } from "firebase/firestore";
 import { tRakeezSchoolRef } from "@/lib/rakeezSchool";
+import { schoolToday } from "@/lib/schoolDate";
 
 export default function AnalyticsDashboard({ schoolId }: { schoolId: string }) {
   const [stats, setStats] = useState({
@@ -23,7 +24,7 @@ export default function AnalyticsDashboard({ schoolId }: { schoolId: string }) {
         setErrorMsg("");
 
         const { studentsRef, staffRef, tasksRef, attendanceRef } = tRakeezSchoolRef(schoolId);
-        const today = new Date().toISOString().split("T")[0];
+        const today = schoolToday();
 
         const [studentsSnap, staffSnap, tasksSnap, attendanceSnap] = await Promise.all([
           getDocs(studentsRef),
@@ -72,8 +73,8 @@ export default function AnalyticsDashboard({ schoolId }: { schoolId: string }) {
   return (
     <div className="max-w-7xl mx-auto p-6 bg-white shadow-lg rounded-2xl border border-rose-100" dir="rtl">
       <div className="border-b border-slate-100 pb-4 mb-6">
-        <h2 className="text-2xl font-bold text-slate-800">لوحة المؤشرات وتحليلات خدمات النظام</h2>
-        <p className="text-sm text-slate-500">متابعة دقيقة للأداء التشغيلي واستهلاك الخدمات الفورية</p>
+        <h2 className="rk-title text-slate-800">لوحة المؤشرات وتحليلات خدمات النظام</h2>
+        <p className="rk-lead text-slate-500">متابعة دقيقة للأداء التشغيلي واستهلاك الخدمات الفورية</p>
       </div>
 
       {errorMsg && (

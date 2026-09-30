@@ -17,6 +17,58 @@ body {
     radial-gradient(ellipse 58% 52% at 96% 92%, rgba(166, 204, 236, 0.55), transparent 64%),
     radial-gradient(ellipse 42% 38% at 82% 6%, rgba(214, 196, 230, 0.42), transparent 60%),
     linear-gradient(165deg, #fbf7f4 0%, #fdeef3 48%, #eef4fb 100%);
-  background-attachment: fixed;
+  background-attachment: scroll;
   min-height: 100vh;
+}
+
+@media (min-width: 1024px) {
+  body {
+    background-attachment: fixed;
+  }
+}
+
+@media print {
+  header,
+  nav,
+  footer {
+    display: none !important;
+  }
+}
+
+body {
+  font-size: 15px;
+  line-height: 1.75;
+  color: #1e293b;
+}
+
+.rk-title {
+  font-size: 1.375rem;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+.rk-lead {
+  font-size: 0.9375rem;
+  line-height: 1.75;
+}
+
+.rk-section {
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  font-weight: 700;
+}
+
+.rk-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  font-weight: 600;
+  color: #475569;
+}
+
+@media (min-width: 640px) {
+  .rk-title {
+    font-size: 1.5rem;
+  }
 }
