@@ -40,6 +40,7 @@ interface Assignment {
 type ScheduleView = "assignments" | "general" | "class" | "teacher";
 
 const ALL_CLASSES = "__all__";
+const ALL_SUBJECTS = "__all_subjects__";
 
 const VIEWS: { id: ScheduleView; label: string }[] = [
   { id: "assignments", label: "إسنادات المعلمين" },
@@ -68,7 +69,7 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
   const [assignmentForm, setAssignmentForm] = useState({
     teacherId: "",
     classId: ALL_CLASSES,
-    subjectName: "",
+    subjectName: ALL_SUBJECTS,
     weeklyPeriods: 4,
   });
   const [printKind, setPrintKind] = useState<null | "blank" | "assignments" | "timetable">(null);
@@ -175,15 +176,36 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
     return [...grouped.values()].filter((group) => group.length > 1);
   }, [allSlots]);
 
+  const subjectOptions = useMemo(() => {
+    const names = new Set<string>(Object.keys(SUBJECT_SHORT));
+    assignments.forEach((assignment) => {
+      const name = assignment.subjectName.trim();
+      if (name) names.add(name);
+    });
+    allSlots.forEach((slot) => {
+      const name = slot.subjectName.trim();
+      if (name) names.add(name);
+    });
+    return [...names].sort((a, b) => a.localeCompare(b, "ar"));
+  }, [assignments, allSlots]);
+
   const visibleAssignments = useMemo(() => {
     return assignments.filter((assignment) => {
       const classMatch =
         assignmentForm.classId === ALL_CLASSES || assignment.classId === assignmentForm.classId;
       const teacherMatch =
         !assignmentForm.teacherId || assignment.teacherId === assignmentForm.teacherId;
-      return classMatch && teacherMatch;
+      const subjectMatch =
+        assignmentForm.subjectName === ALL_SUBJECTS ||
+        assignment.subjectName.trim() === assignmentForm.subjectName.trim();
+      return classMatch && teacherMatch && subjectMatch;
     });
-  }, [assignments, assignmentForm.classId, assignmentForm.teacherId]);
+  }, [assignments, assignmentForm.classId, assignmentForm.teacherId, assignmentForm.subjectName]);
+
+  const teacherPeriodsTotal = useMemo(
+    () => visibleAssignments.reduce((sum, assignment) => sum + Number(assignment.weeklyPeriods || 0), 0),
+    [visibleAssignments]
+  );
 
   const placedCount = (assignment: Assignment) =>
     allSlots.filter(
@@ -229,8 +251,12 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
 
   const addAssignment = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!assignmentForm.teacherId || !assignmentForm.subjectName.trim()) {
-      showStatus("اختر المعلم واسم المادة قبل حفظ الإسناد.", true);
+    if (!assignmentForm.teacherId) {
+      showStatus("اختر المعلم قبل حفظ الإسناد.", true);
+      return;
+    }
+    if (!assignmentForm.subjectName.trim() || assignmentForm.subjectName === ALL_SUBJECTS) {
+      showStatus("اختر المادة قبل حفظ الإسناد.", true);
       return;
     }
     if (!assignmentForm.classId || assignmentForm.classId === ALL_CLASSES) {
@@ -255,7 +281,7 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
         weeklyPeriods: assignment.weeklyPeriods,
       });
       setAssignments((prev) => [...prev, assignment]);
-      setAssignmentForm((current) => ({ ...current, subjectName: "" }));
+      setAssignmentForm((current) => ({ ...current, subjectName: ALL_SUBJECTS }));
       showStatus("تم حفظ إسناد المعلم.");
     } catch (error) {
       console.error(error);
@@ -661,13 +687,18 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-2">المادة</label>
-              <input
+              <select
                 value={assignmentForm.subjectName}
                 onChange={(event) => setAssignmentForm((current) => ({ ...current, subjectName: event.target.value }))}
-                placeholder="مثال: رياضيات"
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm"
-                required
-              />
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white"
+              >
+                <option value={ALL_SUBJECTS}>جميع المواد</option>
+                {subjectOptions.map((subject) => (
+                  <option key={subject} value={subject}>
+                    {subject}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-2">حصص الأسبوع</label>
@@ -684,6 +715,17 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
               حفظ الإسناد
             </button>
           </form>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-100 bg-rose-50/60 px-4 py-3 text-sm text-slate-700">
+            <span>
+              {assignmentForm.teacherId
+                ? `إسنادات ${teacherNameById(assignmentForm.teacherId)}`
+                : "جميع إسنادات المعلمين"}
+            </span>
+            <span className="font-bold text-slate-900">
+              إجمالي الحصص المقررة: {teacherPeriodsTotal}
+            </span>
+          </div>
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-sm border-collapse">
