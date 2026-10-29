@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { Timestamp, addDoc, getDocs } from "firebase/firestore";
 import { tRakeezSchoolRef } from "@/lib/rakeezSchool";
-import { classLabel, CLASS_OPTIONS } from "@/lib/classes";
+import { classLabel } from "@/lib/classes";
+import { useSchoolClasses } from "./SchoolClassesProvider";
 
 interface TaskItem {
   id?: string;
@@ -17,6 +18,7 @@ interface TaskItem {
 }
 
 export default function TasksDashboard({ schoolId, currentUserId }: { schoolId: string; currentUserId: string }) {
+  const { options } = useSchoolClasses();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -128,7 +130,7 @@ export default function TasksDashboard({ schoolId, currentUserId }: { schoolId: 
             onChange={(event) => setTargetClass(event.target.value)}
             className="p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
           >
-            {CLASS_OPTIONS.map((item) => (
+            {options.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.label}
               </option>

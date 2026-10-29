@@ -1,9 +1,18 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { deleteDoc, doc, getDocs, query, setDoc, where } from "firebase/firestore";
 import { tRakeezSchoolRef } from "@/lib/rakeezSchool";
-import { CLASS_OPTIONS, DAYS, PERIODS, classLabel, dayLabel } from "@/lib/classes";
+import { DAYS, PERIODS, SUBJECT_SHORT, classLabel, classShort, dayLabel } from "@/lib/classes";
+import { useSchoolClasses } from "./SchoolClassesProvider";
+import {
+  listTimetableArchives,
+  parseTimetableCsv,
+  savePrimaryTimetable,
+  saveTimetableArchive,
+  type ArchiveRecord,
+  type TransferSlot,
+} from "@/lib/timetableTransfer";
 
 interface TimetableSlot {
   id: string;
@@ -17,6 +26,7 @@ interface TimetableSlot {
 interface Teacher {
   id: string;
   fullName: string;
+  scheduleOrder: number;
 }
 
 interface Assignment {
@@ -28,6 +38,8 @@ interface Assignment {
 }
 
 type ScheduleView = "assignments" | "general" | "class" | "teacher";
+
+const ALL_CLASSES = "__all__";
 
 const VIEWS: { id: ScheduleView; label: string }[] = [
   { id: "assignments", label: "إسنادات المعلمين" },
@@ -41,8 +53,10 @@ function slotKey(day: string, period: number, classId: string) {
 }
 
 export default function TimetableDashboard({ schoolId, classId }: { schoolId: string; classId: string }) {
-  const [view, setView] = useState<ScheduleView>("assignments");
+  const { options } = useSchoolClasses();
+  const [view, setView] = useState<ScheduleView>("general");
   const [slots, setSlots] = useState<Record<string, TimetableSlot>>({});
+  const [allSlots, setAllSlots] = useState<TimetableSlot[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState("");
@@ -53,10 +67,16 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
   const [teacherName, setTeacherName] = useState("");
   const [assignmentForm, setAssignmentForm] = useState({
     teacherId: "",
-    classId,
+    classId: ALL_CLASSES,
     subjectName: "",
     weeklyPeriods: 4,
   });
+  const [printKind, setPrintKind] = useState<null | "blank" | "assignments" | "timetable">(null);
+  const [archives, setArchives] = useState<ArchiveRecord[]>([]);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [selectedArchiveId, setSelectedArchiveId] = useState("");
+  const shouldPrint = useRef(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const teacherNameById = (id: string) => teachers.find((teacher) => teacher.id === id)?.fullName || id;
 
@@ -84,17 +104,24 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
           teachersData.push({
             id: teacherDoc.id,
             fullName: String(teacherDoc.data().fullName ?? ""),
+            scheduleOrder: Number(teacherDoc.data().scheduleOrder ?? 0),
           });
         });
+        teachersData.sort((a, b) => (a.scheduleOrder || 999) - (b.scheduleOrder || 999) || a.fullName.localeCompare(b.fullName, "ar"));
         setTeachers(teachersData);
         setSelectedTeacherId((current) => current || teachersData[0]?.id || "");
 
         const timetableSnapshot = await getDocs(timetablesRef);
         const slotsMap: Record<string, TimetableSlot> = {};
+        const loaded: TimetableSlot[] = [];
         timetableSnapshot.forEach((slotDoc) => {
           const data = slotDoc.data() as Omit<TimetableSlot, "id">;
-          slotsMap[slotKey(data.dayOfWeek, data.periodNumber, data.classId)] = { id: slotDoc.id, ...data };
+          const slot = { id: slotDoc.id, ...data };
+          loaded.push(slot);
+          const key = slotKey(data.dayOfWeek, data.periodNumber, data.classId);
+          if (!slotsMap[key]) slotsMap[key] = slot;
         });
+        setAllSlots(loaded);
         setSlots(slotsMap);
 
         const assignmentSnapshot = await getDocs(assignmentsRef);
@@ -122,26 +149,44 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
   }, [schoolId]);
 
   useEffect(() => {
-    setAssignmentForm((current) => ({ ...current, classId }));
-  }, [classId]);
+    if (!printKind || !shouldPrint.current) return;
+    shouldPrint.current = false;
+    const timer = window.setTimeout(() => window.print(), 80);
+    return () => window.clearTimeout(timer);
+  }, [printKind]);
 
   const classSlots = useMemo(
     () => Object.values(slots).filter((slot) => slot.classId === classId),
     [slots, classId]
   );
 
+  const scheduleTeachers = useMemo(
+    () => teachers.filter((teacher) => teacher.scheduleOrder > 0).sort((a, b) => a.scheduleOrder - b.scheduleOrder),
+    [teachers]
+  );
+
   const conflicts = useMemo(() => {
     const grouped = new Map<string, TimetableSlot[]>();
-    Object.values(slots).forEach((slot) => {
+    allSlots.forEach((slot) => {
       if (!slot.teacherId) return;
       const key = `${slot.teacherId}_${slot.dayOfWeek}_${slot.periodNumber}`;
       grouped.set(key, [...(grouped.get(key) ?? []), slot]);
     });
     return [...grouped.values()].filter((group) => group.length > 1);
-  }, [slots]);
+  }, [allSlots]);
+
+  const visibleAssignments = useMemo(() => {
+    return assignments.filter((assignment) => {
+      const classMatch =
+        assignmentForm.classId === ALL_CLASSES || assignment.classId === assignmentForm.classId;
+      const teacherMatch =
+        !assignmentForm.teacherId || assignment.teacherId === assignmentForm.teacherId;
+      return classMatch && teacherMatch;
+    });
+  }, [assignments, assignmentForm.classId, assignmentForm.teacherId]);
 
   const placedCount = (assignment: Assignment) =>
-    Object.values(slots).filter(
+    allSlots.filter(
       (slot) =>
         slot.teacherId === assignment.teacherId &&
         slot.classId === assignment.classId &&
@@ -171,7 +216,7 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
       const { staffRef } = tRakeezSchoolRef(schoolId);
       const teacherRef = doc(staffRef);
       await setDoc(teacherRef, { fullName, role: "teacher" });
-      setTeachers((prev) => [...prev, { id: teacherRef.id, fullName }]);
+      setTeachers((prev) => [...prev, { id: teacherRef.id, fullName, scheduleOrder: 0 }]);
       setTeacherName("");
       showStatus("تمت إضافة المعلم إلى كادر الإسناد.");
     } catch (error) {
@@ -186,6 +231,10 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
     event.preventDefault();
     if (!assignmentForm.teacherId || !assignmentForm.subjectName.trim()) {
       showStatus("اختر المعلم واسم المادة قبل حفظ الإسناد.", true);
+      return;
+    }
+    if (!assignmentForm.classId || assignmentForm.classId === ALL_CLASSES) {
+      showStatus("اختر الفصل قبل حفظ الإسناد.", true);
       return;
     }
     try {
@@ -272,15 +321,252 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
     }
   };
 
+  const toTransfer = (source: TimetableSlot[]): TransferSlot[] =>
+    source
+      .filter((slot) => slot.subjectName.trim() || slot.teacherId)
+      .map((slot) => ({
+        id: slot.id,
+        dayOfWeek: slot.dayOfWeek,
+        periodNumber: slot.periodNumber,
+        classId: slot.classId,
+        subjectName: slot.subjectName,
+        teacherId: slot.teacherId,
+        teacherName: teacherNameById(slot.teacherId),
+      }));
+
+  const applySlots = (next: TimetableSlot[]) => {
+    const map: Record<string, TimetableSlot> = {};
+    next.forEach((slot) => {
+      const key = slotKey(slot.dayOfWeek, slot.periodNumber, slot.classId);
+      if (!map[key]) map[key] = slot;
+    });
+    setAllSlots(next);
+    setSlots(map);
+  };
+
+  const openPrint = (kind: "blank" | "assignments" | "timetable") => {
+    shouldPrint.current = true;
+    setPrintKind(kind);
+  };
+
+  const openArchive = async () => {
+    try {
+      setSaving(true);
+      const records = await listTimetableArchives(schoolId);
+      setArchives(records);
+      setSelectedArchiveId(records[0]?.id ?? "");
+      setArchiveOpen(true);
+      if (records.length === 0) showStatus("لا توجد جداول محفوظة في الأرشيف بعد.");
+    } catch (error) {
+      console.error(error);
+      showStatus("تعذر قراءة أرشيف الجداول.", true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const loadArchive = () => {
+    const record = archives.find((item) => item.id === selectedArchiveId);
+    if (!record) {
+      showStatus("اختر جدولاً من الأرشيف.", true);
+      return;
+    }
+    const next = record.slots
+      .map((slot) => {
+        const teacher =
+          teachers.find((item) => item.id === slot.teacherId) ||
+          teachers.find((item) => item.fullName.trim() === slot.teacherName.trim());
+        if (!teacher) return null;
+        return {
+          id: slot.id || `${slot.dayOfWeek}_${slot.periodNumber}_${teacher.id}`,
+          dayOfWeek: slot.dayOfWeek,
+          periodNumber: slot.periodNumber,
+          classId: slot.classId,
+          subjectName: slot.subjectName,
+          teacherId: teacher.id,
+        };
+      })
+      .filter((slot): slot is TimetableSlot => Boolean(slot));
+    applySlots(next);
+    setArchiveOpen(false);
+    showStatus("تم تحميل الجدول من الأرشيف دون حذف النسخة المؤرشفة. احفظه كأساسي لاعتماده.");
+  };
+
+  const saveArchiveCopy = async () => {
+    try {
+      setSaving(true);
+      const saved = await saveTimetableArchive(schoolId, toTransfer(allSlots), "الجدول العام");
+      setArchives((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
+      setSelectedArchiveId(saved.id);
+      showStatus("تم حفظ نسخة من الجدول في الأرشيف دون استبدال الجدول الأساسي.");
+    } catch (error) {
+      console.error(error);
+      showStatus("تعذر الحفظ في الأرشيف.", true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveAsPrimary = async () => {
+    try {
+      setSaving(true);
+      await savePrimaryTimetable(schoolId, toTransfer(allSlots));
+      showStatus("تم حفظ الجدول كجدول أساسي.");
+    } catch (error) {
+      console.error(error);
+      showStatus("تعذر حفظ الجدول الأساسي.", true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const importTimetableFile = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      setSaving(true);
+      const text = await file.text();
+      const parsed = parseTimetableCsv(text, teachers);
+      const known = [...teachers];
+      const next = [...allSlots];
+      for (const slot of parsed.slots) {
+        let teacher = known.find((item) => item.fullName.trim() === slot.teacherName.trim());
+        if (!teacher) {
+          const { staffRef } = tRakeezSchoolRef(schoolId);
+          const teacherRef = doc(staffRef);
+          await setDoc(teacherRef, { fullName: slot.teacherName, role: "teacher", scheduleOrder: 0, subjects: [slot.subjectName] });
+          teacher = { id: teacherRef.id, fullName: slot.teacherName, scheduleOrder: 0 };
+          known.push(teacher);
+        }
+        const kept = next.filter(
+          (item) =>
+            !(item.dayOfWeek === slot.dayOfWeek && item.periodNumber === slot.periodNumber && item.teacherId === teacher.id) &&
+            !(item.dayOfWeek === slot.dayOfWeek && item.periodNumber === slot.periodNumber && item.classId === slot.classId)
+        );
+        next.length = 0;
+        next.push(...kept, {
+          id: `${slot.dayOfWeek}_${slot.periodNumber}_${teacher.id}`,
+          dayOfWeek: slot.dayOfWeek,
+          periodNumber: slot.periodNumber,
+          classId: slot.classId,
+          subjectName: slot.subjectName,
+          teacherId: teacher.id,
+        });
+      }
+      setTeachers(known);
+      applySlots(next);
+      showStatus(`تم تحميل ${parsed.slots.length} حصة من الملف. تم تجاوز ${parsed.skipped} صف.`);
+    } catch (error) {
+      console.error(error);
+      showStatus(error instanceof Error ? error.message : "تعذر استيراد الملف.", true);
+    } finally {
+      setSaving(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
   if (loading) {
     return <div className="p-6 text-center text-slate-600">جاري تحميل الجداول والإسنادات...</div>;
   }
 
-  const teacherSlots = Object.values(slots).filter((slot) => slot.teacherId === selectedTeacherId);
+  const teacherSlots = allSlots.filter((slot) => slot.teacherId === selectedTeacherId);
+  const generalTeachers = scheduleTeachers.length > 0 ? scheduleTeachers : [...teachers].sort((a, b) => a.fullName.localeCompare(b.fullName, "ar"));
   const classAssignments = assignments.filter((item) => item.classId === classId);
 
+  const blankRows = Array.from({ length: 18 }, (_, index) => index);
+  const buttonClass = "px-3 py-2 rounded-xl text-sm font-medium border border-slate-200 bg-white text-slate-800 hover:bg-rose-50 disabled:opacity-60";
+
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 bg-white shadow-lg rounded-2xl border border-rose-100" dir="rtl">
+    <div dir="rtl">
+      {printKind && (
+        <section className={`print-sheet p-4 ${printKind === "timetable" ? "print-timetable" : ""}`}>
+          <h2 className="rk-title text-slate-800 mb-1">
+            {printKind === "blank" ? "كشف إسناد مفرغ" : printKind === "assignments" ? "بيانات الإسناد" : "الجدول المدرسي العام"}
+          </h2>
+          <p className="text-sm text-slate-600 mb-3">مدرسة هارون الرشيد الابتدائية — نظام مسار — عام 1448/1449 هـ</p>
+          {printKind === "timetable" ? (
+            <table className="w-full text-[8px] border-collapse border border-slate-400">
+              <thead>
+                <tr>
+                  <th className="border border-slate-400 p-1">م</th>
+                  <th className="border border-slate-400 p-1">المعلم</th>
+                  {DAYS.map((day) => (
+                    <th key={day.key} className="border border-slate-400 p-1 text-center" colSpan={7}>
+                      {day.label}
+                    </th>
+                  ))}
+                  <th className="border border-slate-400 p-1">المجموع</th>
+                </tr>
+                <tr>
+                  <th className="border border-slate-400"></th>
+                  <th className="border border-slate-400"></th>
+                  {DAYS.flatMap((day) =>
+                    PERIODS.map((period) => (
+                      <th key={`${day.key}-${period}`} className="border border-slate-400 text-center">
+                        {period}
+                      </th>
+                    ))
+                  )}
+                  <th className="border border-slate-400"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {generalTeachers.map((teacher) => {
+                  const own = allSlots.filter((slot) => slot.teacherId === teacher.id);
+                  return (
+                    <tr key={teacher.id}>
+                      <td className="border border-slate-400 text-center">{teacher.scheduleOrder || ""}</td>
+                      <td className="border border-slate-400 whitespace-nowrap">{teacher.fullName}</td>
+                      {DAYS.flatMap((day) =>
+                        PERIODS.map((period) => {
+                          const slot = own.find((item) => item.dayOfWeek === day.key && item.periodNumber === period);
+                          return (
+                            <td key={`${day.key}-${period}`} className="border border-slate-400 text-center">
+                              {slot ? `${SUBJECT_SHORT[slot.subjectName] || slot.subjectName} ${classShort(slot.classId)}` : ""}
+                            </td>
+                          );
+                        })
+                      )}
+                      <td className="border border-slate-400 text-center">{own.length}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr>
+                  {["المعلم", "الفصل", "المادة", "حصص الأسبوع"].map((header) => (
+                    <th key={header} className="border border-slate-400 p-2 text-right">
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {printKind === "blank"
+                  ? blankRows.map((row) => (
+                      <tr key={row} className="h-10">
+                        <td className="border border-slate-400"></td>
+                        <td className="border border-slate-400"></td>
+                        <td className="border border-slate-400"></td>
+                        <td className="border border-slate-400"></td>
+                      </tr>
+                    ))
+                  : visibleAssignments.map((assignment) => (
+                      <tr key={assignment.id}>
+                        <td className="border border-slate-400 p-2">{teacherNameById(assignment.teacherId)}</td>
+                        <td className="border border-slate-400 p-2">{classLabel(assignment.classId)}</td>
+                        <td className="border border-slate-400 p-2">{assignment.subjectName}</td>
+                        <td className="border border-slate-400 p-2 text-center">{assignment.weeklyPeriods}</td>
+                      </tr>
+                    ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      )}
+    <div className="no-print max-w-[96rem] mx-auto p-4 sm:p-6 bg-white shadow-lg rounded-2xl border border-rose-100">
       <div className="flex flex-col gap-4 lg:flex-row lg:justify-between lg:items-center mb-5 border-b border-slate-100 pb-4">
         <div>
           <h2 className="rk-title text-slate-800">الجداول وإسنادات المعلمين</h2>
@@ -332,6 +618,14 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
               إضافة معلم
             </button>
           </form>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => openPrint("blank")} className={buttonClass}>
+              طباعة كشف مفرغ
+            </button>
+            <button type="button" onClick={() => openPrint("assignments")} className={buttonClass}>
+              طباعة بيانات الإسناد
+            </button>
+          </div>
 
           <form onSubmit={addAssignment} className="grid gap-3 md:grid-cols-2 xl:grid-cols-5 xl:items-end">
             <div>
@@ -357,7 +651,8 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
                 onChange={(event) => setAssignmentForm((current) => ({ ...current, classId: event.target.value }))}
                 className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white"
               >
-                {CLASS_OPTIONS.map((item) => (
+                <option value={ALL_CLASSES}>جميع الفصول</option>
+                {options.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.label}
                   </option>
@@ -403,14 +698,14 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
                 </tr>
               </thead>
               <tbody>
-                {assignments.length === 0 ? (
+                {visibleAssignments.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-6 text-center text-slate-400">
                       لا توجد إسنادات بعد.
                     </td>
                   </tr>
                 ) : (
-                  assignments.map((assignment) => {
+                  visibleAssignments.map((assignment) => {
                     const placed = placedCount(assignment);
                     return (
                       <tr key={assignment.id} className="border-t border-slate-100">
@@ -438,46 +733,127 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
 
       {view === "general" && (
         <div>
-          <p className="text-xs text-slate-500 mb-3 md:hidden">اسحب الجدول أفقياً لعرض كل الفصول.</p>
+          <div className="flex flex-wrap gap-2 mb-4">
+            <button type="button" onClick={openArchive} disabled={saving} className={buttonClass}>
+              استيراد جدول من الأرشيف
+            </button>
+            <button type="button" onClick={() => fileRef.current?.click()} disabled={saving} className={buttonClass}>
+              استيراد جدول من ملف
+            </button>
+            <button type="button" onClick={saveArchiveCopy} disabled={saving} className={buttonClass}>
+              حفظ في الأرشيف
+            </button>
+            <button type="button" onClick={saveAsPrimary} disabled={saving} className="px-3 py-2 rounded-xl text-sm font-medium bg-blue-600 text-white disabled:opacity-60">
+              حفظ كأساسي
+            </button>
+            <button type="button" onClick={() => openPrint("timetable")} className={buttonClass}>
+              طباعة
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(event) => importTimetableFile(event.target.files?.[0])}
+            />
+          </div>
+          {archiveOpen && (
+            <div className="mb-4 p-3 rounded-xl border border-rose-100 bg-rose-50/50 flex flex-col gap-2 sm:flex-row sm:items-end">
+              <label className="flex-1 text-xs font-semibold text-slate-700">
+                الجداول المؤرشفة
+                <select
+                  value={selectedArchiveId}
+                  onChange={(event) => setSelectedArchiveId(event.target.value)}
+                  className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white"
+                >
+                  {archives.length === 0 ? (
+                    <option value="">لا توجد نسخ</option>
+                  ) : (
+                    archives.map((record) => (
+                      <option key={record.id} value={record.id}>
+                        {record.label} — {record.savedAt ? new Date(record.savedAt).toLocaleString("ar-SA") : "بدون تاريخ"} — {record.slots.length} حصة
+                      </option>
+                    ))
+                  )}
+                </select>
+              </label>
+              <button type="button" onClick={loadArchive} disabled={!selectedArchiveId} className="px-3 py-2 rounded-xl text-sm bg-slate-800 text-white disabled:opacity-60">
+                تحميل النسخة
+              </button>
+            </div>
+          )}
+          <div className="mb-4 text-center">
+            <p className="text-sm font-bold text-slate-800">الإدارة العامة للتعليم بمنطقة عسير — مدرسة هارون الرشيد الابتدائية</p>
+            <p className="text-xs text-slate-500">الجدول المدرسي العام — نظام مسار — عام 1448/1449 هـ — من الأحد إلى الخميس، سبع حصص يومياً</p>
+          </div>
+          <p className="text-xs text-slate-500 mb-3">اسحب الجدول أفقياً لعرض كل الأيام. الخلية تعرض المادة مختصرة ثم الفصل، كما في جدول مسار.</p>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[880px] text-xs border-collapse border border-slate-200">
+            <table className="w-full min-w-[1280px] text-[11px] border-collapse border border-slate-300">
               <thead>
-                <tr className="bg-rose-50/80">
-                  <th className="p-2 border border-slate-200">اليوم</th>
-                  <th className="p-2 border border-slate-200">الحصة</th>
-                  {CLASS_OPTIONS.map((item) => (
-                    <th key={item.id} className="p-2 border border-slate-200">
-                      {item.label}
+                <tr className="bg-rose-50/80 text-slate-800">
+                  <th rowSpan={2} className="p-2 border border-slate-300 sticky right-0 bg-rose-50 z-10">م</th>
+                  <th rowSpan={2} className="p-2 border border-slate-300 min-w-[8.5rem] sticky right-8 bg-rose-50 z-10">المعلم</th>
+                  {DAYS.map((day) => (
+                    <th key={day.key} colSpan={PERIODS.length} className="p-2 border border-slate-300 text-center">
+                      {day.label}
                     </th>
                   ))}
+                  <th rowSpan={2} className="p-2 border border-slate-300">المجموع</th>
+                </tr>
+                <tr className="bg-slate-50 text-slate-600">
+                  {DAYS.flatMap((day) =>
+                    PERIODS.map((period) => (
+                      <th key={`${day.key}-${period}`} className="p-1 border border-slate-300 text-center w-14">
+                        {period}
+                      </th>
+                    ))
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {DAYS.flatMap((day) =>
-                  PERIODS.map((period) => (
-                    <tr key={`${day.key}-${period}`}>
-                      <td className="p-2 border border-slate-200 font-bold bg-slate-50">{day.label}</td>
-                      <td className="p-2 border border-slate-200 text-center">{period}</td>
-                      {CLASS_OPTIONS.map((item) => {
-                        const slot = slots[slotKey(day.key, period, item.id)];
-                        return (
-                          <td key={item.id} className="p-2 border border-slate-200 align-top">
-                            {slot?.subjectName ? (
-                              <>
-                                <div className="font-bold text-slate-800">{slot.subjectName}</div>
-                                <div className="text-slate-500">{slot.teacherId ? teacherNameById(slot.teacherId) : "بدون معلم"}</div>
-                              </>
-                            ) : (
-                              <span className="text-slate-300">—</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))
+                {generalTeachers.length === 0 ? (
+                  <tr>
+                    <td colSpan={3 + DAYS.length * PERIODS.length} className="p-6 text-center text-slate-400">
+                      لا يوجد معلمون على الجدول العام بعد.
+                    </td>
+                  </tr>
+                ) : (
+                  generalTeachers.map((teacher) => {
+                    const own = allSlots.filter((slot) => slot.teacherId === teacher.id);
+                    return (
+                      <tr key={teacher.id}>
+                        <td className="p-1 border border-slate-300 text-center font-bold sticky right-0 bg-white">{teacher.scheduleOrder || "—"}</td>
+                        <td className="p-1 border border-slate-300 font-bold sticky right-8 bg-white whitespace-nowrap">{teacher.fullName}</td>
+                        {DAYS.flatMap((day) =>
+                          PERIODS.map((period) => {
+                            const slot = own.find((item) => item.dayOfWeek === day.key && item.periodNumber === period);
+                            const crowded = own.filter((item) => item.dayOfWeek === day.key && item.periodNumber === period).length > 1;
+                            return (
+                              <td key={`${day.key}-${period}`} className={`p-1 border border-slate-300 text-center align-middle leading-tight ${crowded ? "bg-rose-50" : ""}`}>
+                                {slot ? (
+                                  <>
+                                    <div className="font-bold text-slate-800">{SUBJECT_SHORT[slot.subjectName] || slot.subjectName}</div>
+                                    <div className="text-slate-500">{classShort(slot.classId)}</div>
+                                  </>
+                                ) : null}
+                              </td>
+                            );
+                          })
+                        )}
+                        <td className="p-1 border border-slate-300 text-center font-bold">{own.length}</td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-slate-600">
+            {Object.entries(SUBJECT_SHORT).map(([full, short]) => (
+              <span key={full} className="px-2 py-1 rounded-lg bg-rose-50 border border-rose-100">
+                {short}: {full}
+              </span>
+            ))}
           </div>
         </div>
       )}
@@ -610,6 +986,7 @@ export default function TimetableDashboard({ schoolId, classId }: { schoolId: st
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

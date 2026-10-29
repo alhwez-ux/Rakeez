@@ -4,21 +4,168 @@
   --font-sans: var(--font-cairo), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* خلفية الصفحات: وردي هادئ مع كريمي وأزرق سماوي وبنفسجي فاتح */
-html[data-bg="modern"] body {
-  background-color: #f4f6f8;
-  background-image: linear-gradient(180deg, #f8fafc 0%, #eef2f6 100%);
+/* الهوية الافتراضية: الأزرق الملكي. بقية الألوان تعيد تعريف نفس المتغيرات. */
+:root,
+html[data-theme="blue"] {
+  --rk-line: #d5e3f6;
+  --rk-page-from: #f7f9fd;
+  --rk-page-mid: #eef3fb;
+  --rk-page-to: #e4eef8;
+  --rk-glow: rgba(37, 99, 235, 0.16);
+  --rk-glow-2: rgba(96, 165, 250, 0.22);
+  --rk-brand-from: #15283c;
+  --rk-brand-mid: #1d4268;
+  --rk-brand-to: #27588a;
+  --rk-brand-glow: rgba(96, 165, 250, 0.34);
+  --rk-brand-glow-2: rgba(147, 197, 253, 0.2);
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bfdbfe;
+  --color-blue-300: #93c5fd;
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+  --color-blue-800: #1e40af;
+  --color-blue-900: #1e3a8a;
+}
+
+html[data-theme="emerald"] {
+  --rk-line: #c9eadb;
+  --rk-page-from: #f4fbf7;
+  --rk-page-mid: #e7f6ee;
+  --rk-page-to: #d7efe4;
+  --rk-glow: rgba(5, 150, 105, 0.16);
+  --rk-glow-2: rgba(52, 211, 153, 0.22);
+  --rk-brand-from: #0c2e24;
+  --rk-brand-mid: #135744;
+  --rk-brand-to: #1a6b52;
+  --rk-brand-glow: rgba(52, 211, 153, 0.3);
+  --rk-brand-glow-2: rgba(16, 185, 129, 0.18);
+  --color-blue-50: #ecfdf5;
+  --color-blue-100: #d1fae5;
+  --color-blue-200: #a7f3d0;
+  --color-blue-300: #6ee7b7;
+  --color-blue-400: #34d399;
+  --color-blue-500: #10b981;
+  --color-blue-600: #059669;
+  --color-blue-700: #047857;
+  --color-blue-800: #065f46;
+  --color-blue-900: #064e3b;
+}
+
+html[data-theme="indigo"] {
+  --rk-line: #d9def8;
+  --rk-page-from: #f7f7fd;
+  --rk-page-mid: #eeeef8;
+  --rk-page-to: #e4e4f4;
+  --rk-glow: rgba(79, 70, 229, 0.16);
+  --rk-glow-2: rgba(129, 140, 248, 0.22);
+  --rk-brand-from: #1e1b4b;
+  --rk-brand-mid: #312e81;
+  --rk-brand-to: #3f3a8a;
+  --rk-brand-glow: rgba(129, 140, 248, 0.32);
+  --rk-brand-glow-2: rgba(165, 180, 252, 0.18);
+  --color-blue-50: #eef2ff;
+  --color-blue-100: #e0e7ff;
+  --color-blue-200: #c7d2fe;
+  --color-blue-300: #a5b4fc;
+  --color-blue-400: #818cf8;
+  --color-blue-500: #6366f1;
+  --color-blue-600: #4f46e5;
+  --color-blue-700: #4338ca;
+  --color-blue-800: #3730a3;
+  --color-blue-900: #312e81;
+}
+
+html[data-theme="tiffany"] {
+  --rk-line: #c5e8e5;
+  --rk-page-from: #f3fbfa;
+  --rk-page-mid: #e5f6f4;
+  --rk-page-to: #d3eeeb;
+  --rk-glow: rgba(10, 186, 181, 0.24);
+  --rk-glow-2: rgba(20, 184, 166, 0.18);
+  --rk-brand-from: #073432;
+  --rk-brand-mid: #0c524e;
+  --rk-brand-to: #12706b;
+  --rk-brand-glow: rgba(20, 184, 166, 0.36);
+  --rk-brand-glow-2: rgba(10, 186, 181, 0.22);
+  --color-blue-50: #f0fdfa;
+  --color-blue-100: #d5f5f2;
+  --color-blue-200: #b0eae6;
+  --color-blue-300: #7dd9d3;
+  --color-blue-400: #14b8a6;
+  --color-blue-500: #0abab5;
+  --color-blue-600: #117a74;
+  --color-blue-700: #0e6560;
+  --color-blue-800: #0a4c48;
+  --color-blue-900: #083936;
+}
+
+html[data-theme="cumin"] {
+  --rk-line: #ead9bf;
+  --rk-page-from: #fbf8f3;
+  --rk-page-mid: #f6eee2;
+  --rk-page-to: #efe2cf;
+  --rk-glow: rgba(196, 162, 101, 0.34);
+  --rk-glow-2: rgba(166, 124, 82, 0.18);
+  --rk-brand-from: #3a2a1c;
+  --rk-brand-mid: #5c422c;
+  --rk-brand-to: #7a5840;
+  --rk-brand-glow: rgba(196, 162, 101, 0.38);
+  --rk-brand-glow-2: rgba(166, 124, 82, 0.22);
+  --color-blue-50: #fbf7f1;
+  --color-blue-100: #f4ead6;
+  --color-blue-200: #e8d4ae;
+  --color-blue-300: #d4b67d;
+  --color-blue-400: #c4a265;
+  --color-blue-500: #b08a4e;
+  --color-blue-600: #94633c;
+  --color-blue-700: #7a5130;
+  --color-blue-800: #5e3e25;
+  --color-blue-900: #3f2918;
+}
+
+html[data-theme="pink"] {
+  --rk-line: #f0d4e0;
+  --rk-page-from: #fdf8fa;
+  --rk-page-mid: #f9eef3;
+  --rk-page-to: #f3e0e9;
+  --rk-glow: rgba(232, 155, 181, 0.42);
+  --rk-glow-2: rgba(212, 114, 154, 0.2);
+  --rk-brand-from: #3d2230;
+  --rk-brand-mid: #6a3450;
+  --rk-brand-to: #8a4564;
+  --rk-brand-glow: rgba(232, 155, 181, 0.38);
+  --rk-brand-glow-2: rgba(212, 114, 154, 0.22);
+  --color-blue-50: #fdf6f8;
+  --color-blue-100: #f8e6ee;
+  --color-blue-200: #f0cddd;
+  --color-blue-300: #e7b0c6;
+  --color-blue-400: #e89bb5;
+  --color-blue-500: #d4729a;
+  --color-blue-600: #b45280;
+  --color-blue-700: #9a406c;
+  --color-blue-800: #743350;
+  --color-blue-900: #522438;
 }
 
 body {
-  background-color: #f8f3f0;
+  background-color: var(--rk-page-to);
   background-image:
-    radial-gradient(ellipse 72% 58% at 6% 8%, rgba(244, 176, 196, 0.62), transparent 62%),
-    radial-gradient(ellipse 58% 52% at 96% 92%, rgba(166, 204, 236, 0.55), transparent 64%),
-    radial-gradient(ellipse 42% 38% at 82% 6%, rgba(214, 196, 230, 0.42), transparent 60%),
-    linear-gradient(165deg, #fbf7f4 0%, #fdeef3 48%, #eef4fb 100%);
+    radial-gradient(ellipse 72% 58% at 6% 8%, var(--rk-glow), transparent 62%),
+    radial-gradient(ellipse 58% 52% at 96% 92%, var(--rk-glow-2), transparent 64%),
+    linear-gradient(165deg, var(--rk-page-from) 0%, var(--rk-page-mid) 48%, var(--rk-page-to) 100%);
   background-attachment: scroll;
   min-height: 100vh;
+}
+
+html[data-bg="modern"] body {
+  background-color: #f4f6f8;
+  background-image:
+    radial-gradient(ellipse 48% 36% at 0% 0%, var(--rk-glow), transparent 70%),
+    radial-gradient(ellipse 42% 32% at 100% 100%, var(--rk-glow-2), transparent 72%),
+    linear-gradient(180deg, #f8fafc 0%, color-mix(in srgb, var(--rk-page-mid) 55%, #eef2f6) 100%);
 }
 
 @media (min-width: 1024px) {
@@ -27,12 +174,55 @@ body {
   }
 }
 
+.rk-brand-panel {
+  background-color: var(--rk-brand-mid);
+  background-image:
+    radial-gradient(ellipse 55% 45% at 12% 8%, var(--rk-brand-glow), transparent 62%),
+    radial-gradient(ellipse 48% 42% at 92% 88%, var(--rk-brand-glow-2), transparent 64%),
+    linear-gradient(165deg, var(--rk-brand-from) 0%, var(--rk-brand-mid) 52%, var(--rk-brand-to) 100%);
+}
+
+.rk-brand-orb {
+  background: var(--rk-brand-glow);
+}
+
+.rk-brand-orb-soft {
+  background: var(--rk-brand-glow-2);
+}
+
+.rk-line {
+  border-color: var(--rk-line);
+}
+
+.print-sheet {
+  display: none;
+}
+
 @media print {
   header,
   nav,
-  footer {
+  footer,
+  .no-print {
     display: none !important;
   }
+
+  .print-sheet {
+    display: block !important;
+  }
+
+  body {
+    background: #fff !important;
+    background-image: none !important;
+  }
+
+  .print-timetable {
+    page: timetable;
+  }
+}
+
+@page timetable {
+  size: A3 landscape;
+  margin: 8mm;
 }
 
 body {
@@ -65,6 +255,41 @@ body {
   line-height: 1.6;
   font-weight: 600;
   color: #475569;
+}
+
+.rk-call-pad {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  width: min(100%, 26rem);
+  margin-inline: auto;
+}
+
+.rk-call-key {
+  min-height: 5.25rem;
+  border-radius: 1.25rem;
+  border: 1px solid var(--rk-line);
+  background: #fff;
+  color: #1e293b;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.rk-call-key[data-sunk="true"] {
+  background: var(--color-blue-700);
+  color: #fff;
+  border-color: transparent;
+}
+
+.rk-call-key-brand {
+  grid-column: 1 / -1;
+  background: linear-gradient(160deg, var(--rk-brand-from), var(--rk-brand-to));
+  color: #fff;
+  border: 0;
+}
+
+.rk-call-key-wide {
+  grid-column: 1 / -1;
 }
 
 @media (min-width: 640px) {

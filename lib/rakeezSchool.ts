@@ -15,6 +15,7 @@ export function tRakeezSchoolRef(schoolId: string) {
     staffRef: collection(db, "schools", id, "staff"),
     studentsRef: collection(db, "schools", id, "students"),
     timetablesRef: collection(db, "schools", id, "timetables"),
+    timetableArchiveRef: collection(db, "schools", id, "timetable_archive"),
     assignmentsRef: collection(db, "schools", id, "assignments"),
     attendanceRef: collection(db, "schools", id, "attendance"),
     tasksRef: collection(db, "schools", id, "tasks_and_homework"),

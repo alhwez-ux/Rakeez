@@ -7,3 +7,8 @@ out
 .env
 .env.local
 .env*.local
+.vercel
+.env*
+.tmp-import
+.tmp-pdf
+tmp-pdf-names.txt
